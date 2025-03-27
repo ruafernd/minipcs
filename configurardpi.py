@@ -548,15 +548,6 @@ class ConfiguradorDPI:
         buttons_frame = ctk.CTkFrame(header_frame)
         buttons_frame.pack(side="right")
 
-        remove_button = ctk.CTkButton(
-            buttons_frame,
-            text="Remover Selecionado",
-            command=self.remove_selected_app,
-            width=120,
-            height=30
-        )
-        remove_button.pack(side="left", padx=5)
-
         list_apps_button = ctk.CTkButton(
             buttons_frame,
             text="Listar Instalados",
@@ -580,6 +571,25 @@ class ConfiguradorDPI:
         listbox_frame = ctk.CTkFrame(apps_frame)
         listbox_frame.pack(fill="both", expand=True)
 
+        # Estilo personalizado para a scrollbar
+        style = ttk.Style()
+        style.theme_use('default')  # Usar o tema padrão como base
+        style.element_create("Custom.Vertical.TScrollbar.trough", "from", "default")
+        style.element_create("Custom.Vertical.TScrollbar.thumb", "from", "default")
+        style.layout("Custom.Vertical.TScrollbar",
+                    [('Custom.Vertical.TScrollbar.trough',
+                      {'children': [('Custom.Vertical.TScrollbar.thumb', {'expand': '1'})],
+                       'sticky': 'ns'})])
+        style.configure("Custom.Vertical.TScrollbar",
+                      background="#1a1a1a",  # Cor do thumb (a parte que move)
+                      troughcolor="#2E2E2E",  # Cor do canal da scrollbar
+                      borderwidth=0,
+                      arrowsize=0,  # Remove as setas
+                      relief="flat")  # Remove o efeito 3D
+        style.map("Custom.Vertical.TScrollbar",
+                 background=[('pressed', '#0f0f0f'),  # Cor quando pressionado
+                           ('active', '#262626')])  # Cor quando hover
+
         self.app_listbox = tk.Listbox(
             listbox_frame,
             width=40,
@@ -588,12 +598,19 @@ class ConfiguradorDPI:
             fg="white",
             selectbackground="#4A4A4A",
             selectforeground="white",
-            font=("Arial", 10)
+            font=("Arial", 10),
+            borderwidth=0,
+            highlightthickness=0
         )
         self.app_listbox.pack(side="left", fill="both", expand=True, pady=5)
 
-        scrollbar = ttk.Scrollbar(listbox_frame, orient="vertical", command=self.app_listbox.yview)
-        scrollbar.pack(side="right", fill="y")
+        scrollbar = ttk.Scrollbar(
+            listbox_frame,
+            orient="vertical",
+            command=self.app_listbox.yview,
+            style="Custom.Vertical.TScrollbar"
+        )
+        scrollbar.pack(side="right", fill="y", pady=5)
         self.app_listbox.configure(yscrollcommand=scrollbar.set)
 
     def create_default_app_item(self, parent, app_name):
@@ -746,8 +763,25 @@ class ConfiguradorDPI:
         selection = self.app_listbox.curselection()
         if selection:
             app_name = self.app_listbox.get(selection[0])
-            self.app_manager.remove_app(app_name)
-            self.refresh_app_list()
+            # Remove o app da lista do app_manager
+            if app_name in self.app_manager.app_list:
+                self.app_manager.app_list.remove(app_name)
+            # Remove o app da listbox
+            self.app_listbox.delete(selection[0])
+            # Se for um app padrão, atualiza o estado no app_manager e desmarca o checkbox
+            if app_name in self.app_manager.default_apps:
+                self.app_manager.default_apps[app_name] = False
+                # Procura e desmarca o checkbox correspondente
+                for frame in self.main_frame.winfo_children():
+                    if isinstance(frame, ctk.CTkFrame):
+                        for apps_frame in frame.winfo_children():
+                            if isinstance(apps_frame, ctk.CTkFrame):
+                                for default_frame in apps_frame.winfo_children():
+                                    if isinstance(default_frame, ctk.CTkFrame):
+                                        for checkbox in default_frame.winfo_children():
+                                            if isinstance(checkbox, ctk.CTkCheckBox) and checkbox.cget("text") == app_name:
+                                                checkbox.deselect()
+                                                return
 
     def change_dpi(self):
         ip_address = self.ip_entry.get()
