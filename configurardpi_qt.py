@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QFrame, QScrollArea, QSizePolicy, QDialog,
                              QListWidget, QMessageBox, QComboBox, QProgressBar,
                              QGraphicsDropShadowEffect)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QPropertyAnimation, QRect, QEasingCurve, pyqtProperty
 from PyQt6.QtGui import QFont, QPalette, QColor, QIcon, QPainter, QPen, QBrush, QLinearGradient
 
 def resource_path(relative_path):
@@ -1573,9 +1573,6 @@ class ConfiguradorDPI(QMainWindow):
         # Seção de dispositivos
         self.create_devices_section(main_layout)
         
-        # Seção de aplicativos
-        self.create_apps_section(main_layout)
-        
         # Botão principal
         self.create_main_button(main_layout)
         
@@ -1624,7 +1621,7 @@ class ConfiguradorDPI(QMainWindow):
         # Lado direito com badge e pequeno ícone 
         right_box = QVBoxLayout()
         right_box.setSpacing(6)
-        badge = QLabel("v8.5")
+        badge = QLabel("v8.6")
         badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         badge.setStyleSheet("padding:6px 10px; border-radius:8px; background-color: rgba(106,111,255,0.18); font-weight:700;")
         right_box.addWidget(badge, alignment=Qt.AlignmentFlag.AlignRight)
@@ -1670,16 +1667,26 @@ class ConfiguradorDPI(QMainWindow):
         )
         device1_layout = QVBoxLayout(device1_group)
         
+        # Status do dispositivo 1 (em cima)
+        self.status_label1 = QLabel("Dispositivo não conectado")
+        self.status_label1.setMinimumHeight(32)
+        self.status_label1.setObjectName("status")
+        self.status_label1.setStyleSheet("color: #ff6b6b; background-color: #1a1d26; padding: 6px; border-radius: 4px; margin-bottom: 8px;")
+        device1_layout.addWidget(self.status_label1)
+        
+        # Layout horizontal para IP e DPI do dispositivo 1
+        device1_horizontal = QHBoxLayout()
+        
         # IP do dispositivo 1
         ip_layout1 = QVBoxLayout()
         ip_label1 = QLabel("Endereço IP:")
         self.ip_entry1 = QLineEdit()
-        self.ip_entry1.setMinimumWidth(320)
+        self.ip_entry1.setMinimumWidth(200)
         self.ip_entry1.setMinimumHeight(38)
         self.ip_entry1.setText(self.last_ip)
         ip_layout1.addWidget(ip_label1)
         ip_layout1.addWidget(self.ip_entry1)
-        device1_layout.addLayout(ip_layout1)
+        device1_horizontal.addLayout(ip_layout1)
         
         # DPI do dispositivo 1
         dpi_layout1 = QVBoxLayout()
@@ -1687,18 +1694,12 @@ class ConfiguradorDPI(QMainWindow):
         self.dpi_entry1 = QLineEdit()
         self.dpi_entry1.setText(self.last_dpi)
         self.dpi_entry1.setMinimumHeight(38)
-        self.dpi_entry1.setMaximumWidth(120)
+        self.dpi_entry1.setMaximumWidth(80)
         dpi_layout1.addWidget(dpi_label1)
         dpi_layout1.addWidget(self.dpi_entry1)
-        device1_layout.addLayout(dpi_layout1)
+        device1_horizontal.addLayout(dpi_layout1)
         
-        # Status do dispositivo 1
-        self.status_label1 = QLabel("Dispositivo não conectado")
-        self.status_label1.setMinimumHeight(26)
-        self.status_label1.setObjectName("status")
-        self.status_label1.setStyleSheet("color: #ff6b6b; background-color: #1a1d26;")
-        device1_layout.addWidget(self.status_label1)
-        
+        device1_layout.addLayout(device1_horizontal)
         devices_container.addWidget(device1_group)
         
         # Dispositivo 2
@@ -1709,16 +1710,26 @@ class ConfiguradorDPI(QMainWindow):
         )
         device2_layout = QVBoxLayout(device2_group)
         
+        # Status do dispositivo 2 (em cima)
+        self.status_label2 = QLabel("Dispositivo não conectado")
+        self.status_label2.setMinimumHeight(32)
+        self.status_label2.setObjectName("status")
+        self.status_label2.setStyleSheet("color: #ff6b6b; background-color: #1a1d26; padding: 6px; border-radius: 4px; margin-bottom: 8px;")
+        device2_layout.addWidget(self.status_label2)
+        
+        # Layout horizontal para IP e DPI do dispositivo 2
+        device2_horizontal = QHBoxLayout()
+        
         # IP do dispositivo 2
         ip_layout2 = QVBoxLayout()
         ip_label2 = QLabel("Endereço IP:")
         self.ip_entry2 = QLineEdit()
-        self.ip_entry2.setMinimumWidth(320)
+        self.ip_entry2.setMinimumWidth(200)
         self.ip_entry2.setMinimumHeight(38)
         self.ip_entry2.setText(self.last_ip2)
         ip_layout2.addWidget(ip_label2)
         ip_layout2.addWidget(self.ip_entry2)
-        device2_layout.addLayout(ip_layout2)
+        device2_horizontal.addLayout(ip_layout2)
         
         # DPI do dispositivo 2
         dpi_layout2 = QVBoxLayout()
@@ -1726,18 +1737,12 @@ class ConfiguradorDPI(QMainWindow):
         self.dpi_entry2 = QLineEdit()
         self.dpi_entry2.setText(self.last_dpi2)
         self.dpi_entry2.setMinimumHeight(38)
-        self.dpi_entry2.setMaximumWidth(120)
+        self.dpi_entry2.setMaximumWidth(80)
         dpi_layout2.addWidget(dpi_label2)
         dpi_layout2.addWidget(self.dpi_entry2)
-        device2_layout.addLayout(dpi_layout2)
+        device2_horizontal.addLayout(dpi_layout2)
         
-        # Status do dispositivo 2
-        self.status_label2 = QLabel("Dispositivo não conectado")
-        self.status_label2.setMinimumHeight(26)
-        self.status_label2.setObjectName("status")
-        self.status_label2.setStyleSheet("color: #ff6b6b; background-color: #1a1d26;")
-        device2_layout.addWidget(self.status_label2)
-        
+        device2_layout.addLayout(device2_horizontal)
         devices_container.addWidget(device2_group)
         
         devices_layout.addLayout(devices_container)
@@ -1832,25 +1837,29 @@ class ConfiguradorDPI(QMainWindow):
     def create_footer(self, parent_layout):
         footer_layout = QHBoxLayout()
         
-        dev_label = QLabel("Desenvolvido por")
-        dev_label.setStyleSheet("color: #888888; font-size: 10px;")
-        footer_layout.addWidget(dev_label)
-        
-        name_button = QPushButton("Ruã Fernandes")
-        name_button.setStyleSheet("""
-            QPushButton {
+        # Desenvolvido por - botão com efeito neon animado
+        dev_button = NeonButton("Desenvolvido por Ruã Fernandes")
+        dev_button.setStyleSheet("""
+            NeonButton {
                 background-color: transparent;
                 color: #888888;
-                border: none;
-                font-size: 10px;
-                font-weight: bold;
+                border: 1px solid transparent;
+                border-radius: 4px;
+                font-size: 11px;
+                padding: 6px 8px 8px 8px;
+                text-align: left;
             }
-            QPushButton:hover {
+            NeonButton:hover {
                 color: #ffffff;
+                background-color: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            NeonButton:pressed {
+                background-color: rgba(255, 255, 255, 0.1);
             }
         """)
-        name_button.clicked.connect(lambda: self.open_url("https://www.linkedin.com/in/ruã-fernandes-araújo-4617a8282/"))
-        footer_layout.addWidget(name_button)
+        dev_button.clicked.connect(lambda: self.open_url("www.linkedin.com/in/ruafernandes"))
+        footer_layout.addWidget(dev_button)
         
         footer_layout.addStretch()
         
@@ -1895,7 +1904,7 @@ class ConfiguradorDPI(QMainWindow):
                 background-color: #006399;
             }
         """)
-        linkedin_button.clicked.connect(lambda: self.open_url("https://www.linkedin.com/in/ruã-fernandes-araújo-4617a8282/"))
+        linkedin_button.clicked.connect(lambda: self.open_url("www.linkedin.com/in/ruafernandes"))
         footer_layout.addWidget(linkedin_button)
         
         github_button = QPushButton("Git")
@@ -1916,7 +1925,7 @@ class ConfiguradorDPI(QMainWindow):
         github_button.clicked.connect(lambda: self.open_url("https://github.com/ruafernd/"))
         footer_layout.addWidget(github_button)
         
-        version_label = QLabel("v8.5")
+        version_label = QLabel("v8.6")
         version_label.setStyleSheet("color: #888888; font-size: 10px;")
         footer_layout.addWidget(version_label)
         
@@ -2369,7 +2378,7 @@ class UpdateManager:
     def __init__(self):
         # Configuração do Firebase Realtime Database (gratuito)
         self.firebase_url = "https://seu-projeto-firebase-default-rtdb.firebaseio.com/"
-        self.current_version = "8.5"  # Versão atual do aplicativo
+        self.current_version = "8.6"  # Versão atual do aplicativo
         self.app_name = "ConfiguradorDPI"
         
         # Alternativa gratuita: GitHub Releases
@@ -2588,7 +2597,7 @@ class UpdateManager:
                     except Exception as e:
                         return False, f"Erro ao preparar arquivo de atualização: {str(e)}"
 
-                    # Criar script PowerShell que aguarda o app fechar, substitui e não abre novamente
+                    # Criar script PowerShell que aguarda o app fechar, substitui e abre a nova versão
                     ps_script = f'''
 $ErrorActionPreference = 'SilentlyContinue'
 $exePath = "{target_exe}"
@@ -2618,7 +2627,16 @@ try {{ if (Test-Path ($exePath + '.old')) {{ Remove-Item ($exePath + '.old') -Fo
 # Limpeza (novo arquivo já movido)
 try {{ if (Test-Path $tempRoot) {{ Remove-Item $tempRoot -Recurse -Force -ErrorAction SilentlyContinue }} }} catch {{}}
 
-# Não reabrir automaticamente; usuário abrirá manualmente
+# Aguardar um pouco para garantir que o arquivo foi substituído
+Start-Sleep -Seconds 2
+
+# Abrir a nova versão automaticamente
+try {{
+    if (Test-Path $exePath) {{
+        Start-Process $exePath -ErrorAction SilentlyContinue
+    }}
+}} catch {{}}
+
 # Remover o script
 Remove-Item $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
 '''
@@ -2639,9 +2657,9 @@ Remove-Item $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
                     QTimer.singleShot(300, QApplication.instance().quit)
 
                     message = (
-                        "Atualização aplicada.\n\n"
-                        f"O aplicativo será fechado para aplicar a atualização. O arquivo foi substituído em: {target_exe}\n\n"
-                        "Abra o executável novamente manualmente (duplo clique no mesmo atalho/arquivo)."
+                        "Atualização aplicada com sucesso!\n\n"
+                        f"O aplicativo será fechado e a nova versão será aberta automaticamente.\n\n"
+                        f"Arquivo atualizado em: {target_exe}"
                     )
                     return True, message
                 except Exception as e:
@@ -2669,10 +2687,16 @@ Remove-Item $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
                 is_valid, msg = self.validate_executable(new_exe)
                 if not is_valid:
                     return False, f"Executável inválido no pacote: {msg}"
+                
+                # Para arquivos ZIP, ainda requer intervenção manual, mas com melhor orientação
                 message = (
-                    "Atualização preparada com sucesso.\n\n"
-                    f"Novo executável localizado em: {new_exe}\n\n"
-                    "Feche este aplicativo e substitua manualmente o executável antigo mantendo o mesmo nome."
+                    "Atualização extraída com sucesso!\n\n"
+                    f"Nova versão extraída em: {new_exe}\n\n"
+                    "Para completar a atualização:\n"
+                    "1. Feche este aplicativo\n"
+                    "2. Substitua o executável atual pelo novo\n"
+                    "3. Execute a nova versão\n\n"
+                    "Nota: Atualizações em formato EXE são aplicadas automaticamente."
                 )
                 return True, message
             else:
@@ -2901,6 +2925,73 @@ class UpdateDialog(QDialog):
         self.progress_bar.setVisible(False)
         self.update_button.setEnabled(True)
         self.update_button.setText("Tentar Novamente")
+
+class NeonButton(QPushButton):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self._neon_position = 0.0
+        self._animation = QPropertyAnimation(self, b"neon_position")
+        self._animation.setDuration(800)
+        self._animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        self.setMouseTracking(True)
+        
+    @pyqtProperty(float)
+    def neon_position(self):
+        return self._neon_position
+    
+    @neon_position.setter
+    def neon_position(self, value):
+        self._neon_position = value
+        self.update()
+    
+    def enterEvent(self, event):
+        super().enterEvent(event)
+        self._animation.setStartValue(0.0)
+        self._animation.setEndValue(1.0)
+        self._animation.start()
+    
+    def leaveEvent(self, event):
+        super().leaveEvent(event)
+        self._animation.setStartValue(1.0)
+        self._animation.setEndValue(0.0)
+        self._animation.start()
+    
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Desenhar linha neon animada
+        if self._neon_position > 0:
+            rect = self.rect()
+            line_width = 2
+            line_height = 2
+            
+            # Posição da linha baseada na animação
+            line_x = rect.width() * self._neon_position - 20
+            line_y = rect.height() - 4
+            
+            # Criar gradiente neon
+            gradient = QLinearGradient(line_x, line_y, line_x + 40, line_y)
+            gradient.setColorAt(0.0, QColor(0, 200, 255, 0))
+            gradient.setColorAt(0.3, QColor(0, 200, 255, 200))
+            gradient.setColorAt(0.7, QColor(0, 200, 255, 200))
+            gradient.setColorAt(1.0, QColor(0, 200, 255, 0))
+            
+            # Desenhar linha neon principal
+            painter.setBrush(QBrush(gradient))
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRect(int(line_x), int(line_y), 40, line_height)
+            
+            # Efeito de brilho adicional
+            glow_gradient = QLinearGradient(line_x, line_y - 1, line_x + 40, line_y - 1)
+            glow_gradient.setColorAt(0.0, QColor(0, 200, 255, 0))
+            glow_gradient.setColorAt(0.5, QColor(0, 200, 255, 100))
+            glow_gradient.setColorAt(1.0, QColor(0, 200, 255, 0))
+            
+            painter.setBrush(QBrush(glow_gradient))
+            painter.drawRect(int(line_x), int(line_y - 1), 40, line_height + 2)
 
 class AnimatedLineWidget(QWidget):
     def __init__(self, parent=None):
