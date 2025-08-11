@@ -3,13 +3,20 @@ import subprocess
 import os
 import threading
 import time
+# Importações para sistema de atualização
+import requests
+import json
+import zipfile
+import shutil
+from urllib.parse import urlparse
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QGridLayout, QLabel, QLineEdit, 
                              QPushButton, QCheckBox, QTextEdit, QGroupBox,
                              QFrame, QScrollArea, QSizePolicy, QDialog,
-                             QListWidget, QMessageBox, QComboBox)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont, QPalette, QColor, QIcon
+                             QListWidget, QMessageBox, QComboBox, QProgressBar,
+                             QGraphicsDropShadowEffect)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt6.QtGui import QFont, QPalette, QColor, QIcon, QPainter, QPen, QBrush, QLinearGradient
 
 def resource_path(relative_path):
     """Obtenha o caminho absoluto para o recurso"""
@@ -1049,67 +1056,22 @@ class AppListDialog(QDialog):
         self.setWindowTitle("Aplicativos Instalados")
         self.setGeometry(200, 200, 600, 500)
         self.setStyleSheet("""
-            QDialog {
-                background-color: #2b2b2b;
-                color: white;
-            }
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #3c3c3c;
-                border-radius: 8px;
-                margin-top: 1ex;
-                padding-top: 10px;
-                background-color: #363636;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-                color: #ffffff;
-            }
-            QListWidget {
-                background-color: #404040;
-                border: 2px solid #555555;
-                border-radius: 5px;
-                color: white;
-                font-size: 11px;
-                padding: 5px;
-            }
-            QListWidget::item {
-                padding: 5px;
-                border-bottom: 1px solid #555555;
-            }
-            QListWidget::item:selected {
-                background-color: #0078d4;
-            }
-            QPushButton {
-                background-color: #0078d4;
-                border: none;
-                color: white;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-weight: bold;
-                font-size: 11px;
-            }
-            QPushButton:hover {
-                background-color: #106ebe;
-            }
-            QPushButton#select_all {
-                background-color: #28a745;
-            }
-            QPushButton#select_all:hover {
-                background-color: #218838;
-            }
-            QPushButton#deselect_all {
-                background-color: #dc3545;
-            }
-            QPushButton#deselect_all:hover {
-                background-color: #c82333;
-            }
-            QLabel {
-                color: white;
-                font-size: 12px;
-            }
+            QDialog { background-color: #0f1116; color: #e6e6e6; }
+            QLabel { color: #e6e6e6; font-size: 12px; }
+            QGroupBox { font-weight: bold; border: 1px solid #3a4056; border-radius: 10px; margin-top: 10px; padding-top: 10px; background-color: #121725; }
+            QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 6px; color: #c8cbe0; }
+            QListWidget { background-color: #0f121a; border: 1px solid #2b3040; border-radius: 10px; color: #e6e6e6; font-size: 12px; padding: 6px; }
+            QListWidget::item { padding: 6px; border-bottom: 1px solid #262b3a; }
+            QListWidget::item:selected { background-color: #4d58ff; }
+            QPushButton { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4d58ff, stop:1 #8a46ff); border: none; color: white; padding: 9px 16px; border-radius: 10px; font-weight: 700; }
+            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #5a63ff, stop:1 #9b52ff); }
+            QPushButton#select_all { background: #19c37d; }
+            QPushButton#select_all:hover { background: #17b67f; }
+            QPushButton#deselect_all { background: #ff6b35; }
+            QPushButton#deselect_all:hover { background: #e55a2b; }
+            QScrollBar:vertical { background:#1a1d26; width:10px; border:none; }
+            QScrollBar::handle:vertical { background:#3a4056; border-radius:5px; min-height:20px; }
+            QScrollBar::handle:vertical:hover { background:#4b5270; }
         """)
 
         layout = QVBoxLayout(self)
@@ -1118,7 +1080,7 @@ class AppListDialog(QDialog):
 
         # Título
         title_label = QLabel("Aplicativos Instalados no Dispositivo")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: white;")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
 
@@ -1257,102 +1219,26 @@ class DefaultAppsDialog(QDialog):
         self.setWindowTitle("Aplicativos para Remoção")
         self.setGeometry(200, 200, 500, 600)
         self.setStyleSheet("""
-            QDialog {
-                background-color: #2b2b2b;
-                color: white;
-            }
-            QWidget {
-                background-color: #2b2b2b;
-                color: white;
-            }
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #3c3c3c;
-                border-radius: 8px;
-                margin-top: 1ex;
-                padding-top: 10px;
-                background-color: #363636;
-                color: white;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-                color: #ffffff;
-            }
-            QCheckBox {
-                color: white;
-                font-size: 11px;
-                spacing: 8px;
-                padding: 3px;
-                background-color: transparent;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-            }
-            QCheckBox::indicator:unchecked {
-                border: 2px solid #555555;
-                background-color: #404040;
-                border-radius: 3px;
-            }
-            QCheckBox::indicator:checked {
-                border: 2px solid #0078d4;
-                background-color: #0078d4;
-                border-radius: 3px;
-            }
-            QPushButton {
-                background-color: #0078d4;
-                border: none;
-                color: white;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-weight: bold;
-                font-size: 11px;
-                min-width: 80px;
-            }
-            QPushButton:hover {
-                background-color: #106ebe;
-            }
-            QPushButton#select_all {
-                background-color: #28a745;
-            }
-            QPushButton#select_all:hover {
-                background-color: #218838;
-            }
-            QPushButton#deselect_all {
-                background-color: #dc3545;
-            }
-            QPushButton#deselect_all:hover {
-                background-color: #c82333;
-            }
-            QLabel {
-                color: white;
-                font-size: 12px;
-                background-color: transparent;
-            }
-            QScrollArea {
-                border: 1px solid #555555;
-                border-radius: 5px;
-                background-color: #404040;
-            }
-            QScrollArea QWidget {
-                background-color: #404040;
-                color: white;
-            }
-            QScrollArea QScrollBar:vertical {
-                background-color: #555555;
-                width: 12px;
-                border-radius: 6px;
-            }
-            QScrollArea QScrollBar::handle:vertical {
-                background-color: #888888;
-                border-radius: 6px;
-                min-height: 20px;
-            }
-            QScrollArea QScrollBar::handle:vertical:hover {
-                background-color: #aaaaaa;
-            }
+            QDialog { background-color: #0f1116; color: #e6e6e6; }
+            QWidget { background-color: #0f1116; color: #e6e6e6; }
+            QGroupBox { font-weight: bold; border: 1px solid #3a4056; border-radius: 10px; margin-top: 10px; padding-top: 10px; background-color: #121725; }
+            QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 6px; color: #c8cbe0; }
+            QCheckBox { color: #e6e6e6; font-size: 12px; spacing: 8px; padding: 3px; background-color: transparent; }
+            QCheckBox::indicator { width: 18px; height: 18px; }
+            QCheckBox::indicator:unchecked { border: 2px solid #2b3040; background-color: #141822; border-radius: 4px; }
+            QCheckBox::indicator:checked { border: 2px solid #4d58ff; background-color: #4d58ff; border-radius: 4px; }
+            QPushButton { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4d58ff, stop:1 #8a46ff); border: none; color: white; padding: 9px 16px; border-radius: 10px; font-weight: 700; }
+            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #5a63ff, stop:1 #9b52ff); }
+            QPushButton#select_all { background: #19c37d; }
+            QPushButton#select_all:hover { background: #17b67f; }
+            QPushButton#deselect_all { background: #ff6b35; }
+            QPushButton#deselect_all:hover { background: #e55a2b; }
+            QLabel { color: #e6e6e6; font-size: 12px; background-color: transparent; }
+            QScrollArea { border: 1px solid #2b3040; border-radius: 10px; background-color: #0f121a; }
+            QScrollArea QWidget { background-color: #0f121a; color: #e6e6e6; }
+            QScrollBar:vertical { background:#1a1d26; width:10px; border:none; }
+            QScrollBar::handle:vertical { background:#3a4056; border-radius:5px; min-height:20px; }
+            QScrollBar::handle:vertical:hover { background:#4b5270; }
         """)
 
         layout = QVBoxLayout(self)
@@ -1361,7 +1247,7 @@ class DefaultAppsDialog(QDialog):
 
         # Título
         title_label = QLabel("Aplicativos que serão removidos automaticamente:")
-        title_label.setStyleSheet("font-size: 14px; font-weight: bold; color: white;")
+        title_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #ffffff;")
         layout.addWidget(title_label)
 
         # Área de scroll para os checkboxes
@@ -1433,8 +1319,93 @@ class ConfiguradorDPI(QMainWindow):
         self.adb_manager = ADBManager()
         self.app_manager = AppManager()
         self.apk_manager = APKManager()
+        self.update_manager = UpdateManager()  # Adicionar gerenciador de atualizações
+        
+        # Controles para evitar verificações múltiplas
+        self.checking_updates = False
+        self.update_dialog_open = False
+        
         self.load_settings()
         self.init_ui()
+        self.setup_auto_update_check()  # Configurar verificação automática
+
+    def setup_auto_update_check(self):
+        """Configura a verificação automática de atualizações"""
+        # Timer para verificar atualizações na inicialização (após 5 segundos)
+        self.startup_update_timer = QTimer()
+        self.startup_update_timer.setSingleShot(True)
+        self.startup_update_timer.timeout.connect(self.check_updates_silent)
+        self.startup_update_timer.start(5000)  # 5 segundos após a inicialização
+        
+        # Timer para verificações periódicas (a cada 2 horas)
+        self.periodic_update_timer = QTimer()
+        self.periodic_update_timer.timeout.connect(self.check_updates_silent)
+        self.periodic_update_timer.start(2 * 60 * 60 * 1000)  # 2 horas em milissegundos
+
+    def check_updates_silent(self):
+        """Verifica atualizações silenciosamente em segundo plano"""
+        if self.checking_updates or self.update_dialog_open:
+            return
+        
+        self.checking_updates = True
+        self.update_worker = UpdateWorkerThread(self.update_manager)
+        self.update_worker.update_available.connect(self.on_update_available)
+        self.update_worker.error_occurred.connect(self.on_update_error)
+        self.update_worker.finished.connect(lambda: setattr(self, 'checking_updates', False))
+        self.update_worker.start()
+
+    def check_updates_manual(self):
+        """Verifica atualizações manualmente (acionado pelo botão)"""
+        if self.checking_updates:
+            self.result_text.append("⏳ Verificação já em andamento...")
+            return
+        
+        # Mostrar feedback visual
+        if hasattr(self, 'update_button'):
+            self.update_button.setEnabled(False)
+            self.update_button.setText("Verificando...")
+        
+        self.result_text.append("🔍 Verificando atualizações...")
+        self.checking_updates = True
+        
+        self.manual_update_worker = UpdateWorkerThread(self.update_manager)
+        self.manual_update_worker.update_available.connect(self.on_update_available)
+        self.manual_update_worker.error_occurred.connect(self.on_manual_update_error)
+        self.manual_update_worker.finished.connect(self.on_manual_check_finished)
+        self.manual_update_worker.start()
+
+    def on_update_available(self, update_info):
+        """Chamado quando uma atualização está disponível"""
+        if self.update_dialog_open:
+            return
+        
+        self.update_dialog_open = True
+        dialog = UpdateDialog(self, update_info)
+        dialog.finished.connect(lambda: setattr(self, 'update_dialog_open', False))
+        dialog.exec()
+
+    def on_update_error(self, error_message):
+        """Chamado quando há erro na verificação silenciosa (não mostra ao usuário)"""
+        self.checking_updates = False
+        # Log silencioso - pode ser usado para debug
+        pass
+
+    def on_manual_update_error(self, error_message):
+        """Chamado quando há erro na verificação manual"""
+        self.checking_updates = False
+        self.result_text.append(f"❌ Erro ao verificar atualizações: {error_message}")
+
+    def on_manual_check_finished(self):
+        """Chamado quando a verificação manual termina"""
+        self.checking_updates = False
+        
+        if hasattr(self, 'update_button'):
+            self.update_button.setEnabled(True)
+            self.update_button.setText("⟳ Buscar Atualizações")
+        
+        # Se chegou até aqui sem mostrar diálogo, não há atualizações
+        if not self.update_dialog_open:
+            self.result_text.append("✅ Você está usando a versão mais recente!")
 
     def load_settings(self):
         try:
@@ -1467,195 +1438,135 @@ class ConfiguradorDPI(QMainWindow):
             pass
 
     def init_ui(self):
-        self.setWindowTitle("Configurador DPI - Mini PCS")
-        self.setGeometry(100, 100, 800, 750)
+        self.setWindowTitle("Configurador de Mini PCS")
+        self.setGeometry(100, 100, 600, 720)
         
-        # Definir ícone da aplicação
-        try:
-            icon_path = resource_path("logoAI_preto.ico")
-            if os.path.exists(icon_path):
-                self.setWindowIcon(QIcon(icon_path))
-                print(f"Ícone carregado: {icon_path}")
-            else:
-                # Tentar caminho alternativo
-                alt_icon_path = r"C:\Users\RuaF\Downloads\logoAI_preto.ico"
-                if os.path.exists(alt_icon_path):
-                    self.setWindowIcon(QIcon(alt_icon_path))
-                    print(f"Ícone carregado (caminho alternativo): {alt_icon_path}")
-                else:
-                    print("Ícone não encontrado")
-        except Exception as e:
-            print(f"Erro ao carregar ícone: {e}")
+        # Definir ícone da aplicação (método robusto)
+        self.apply_window_icon()
         
-        # Configurar estilo
+        # Configurar estilo (tema novo)
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #2b2b2b;
-                color: white;
+            /* Paleta base */
+            * { font-family: 'Segoe UI', 'Inter', 'Roboto', sans-serif; }
+            QMainWindow { background-color: #0f1116; color: #e6e6e6; }
+            QWidget   { color: #e6e6e6; }
+
+            /* Hero (cabeçalho) - versão clean */
+            QFrame#Hero {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                          stop:0 #141824, stop:1 #1a1f2d);
+                border-radius: 16px;
+                padding: 22px;
+                border: 1px solid #262b3a;
             }
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #3c3c3c;
-                border-radius: 8px;
-                margin-top: 1ex;
-                padding-top: 10px;
-                background-color: #363636;
+            QLabel#HeroTitle { font-size: 24px; font-weight: 800; color: #ffffff; }
+            QLabel#HeroSubtitle { font-size: 12px; color: #b9bfd3; }
+
+            /* Cards */
+            QGroupBox#Card {
+                background-color: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 14px;
+                margin-top: 18px; /* espaço para o título */
+                padding-top: 14px;
             }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-                color: #ffffff;
-            }
-            QLineEdit {
-                padding: 8px;
-                border: 2px solid #555555;
-                border-radius: 5px;
-                background-color: #404040;
-                color: white;
-                font-size: 12px;
-            }
-            QLineEdit:focus {
-                border: 2px solid #0078d4;
-            }
-            QComboBox {
-                padding: 8px;
-                border: 2px solid #555555;
-                border-radius: 5px;
-                background-color: #404040;
-                color: white;
-                font-size: 12px;
-                min-width: 150px;
-            }
-            QComboBox:focus {
-                border: 2px solid #0078d4;
-            }
-            QComboBox::drop-down {
-                border: none;
-                background-color: #555555;
-                border-radius: 3px;
-                width: 20px;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid white;
-                width: 0px;
-                height: 0px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #404040;
-                color: white;
-                selection-background-color: #0078d4;
-                border: 1px solid #555555;
-            }
-            QPushButton {
-                background-color: #0078d4;
-                border: none;
-                color: white;
-                padding: 10px 20px;
-                border-radius: 5px;
-                font-weight: bold;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #106ebe;
-            }
-            QPushButton:pressed {
-                background-color: #005a9e;
-            }
-            QPushButton#usb {
-                background-color: #ff6b35;
-            }
-            QPushButton#usb:hover {
-                background-color: #e55a2b;
-            }
-            QPushButton#main {
-                background-color: #28a745;
-                font-size: 14px;
-                padding: 12px 24px;
-            }
-            QPushButton#main:hover {
-                background-color: #218838;
-            }
-            QCheckBox {
-                color: white;
-                font-size: 11px;
-                spacing: 8px;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-            }
-            QCheckBox::indicator:unchecked {
-                border: 2px solid #555555;
-                background-color: #404040;
-                border-radius: 3px;
-            }
-            QCheckBox::indicator:checked {
-                border: 2px solid #0078d4;
-                background-color: #0078d4;
-                border-radius: 3px;
-            }
-            QLabel {
-                color: white;
-                font-size: 12px;
-            }
-            QLabel#title {
-                font-size: 24px;
-                font-weight: bold;
-                color: #ffffff;
-            }
-            QLabel#status {
-                font-size: 10px;
-                padding: 5px;
-                border-radius: 3px;
-            }
-            QTextEdit {
-                background-color: #404040;
-                border: 2px solid #555555;
-                border-radius: 5px;
-                color: white;
-                font-size: 11px;
-            }
-            QMessageBox {
-                background-color: #2b2b2b;
-                color: white;
-            }
-            QMessageBox QLabel {
-                color: white;
+            QGroupBox#Card::title {
+                subcontrol-origin: margin; left: 16px; top: 10px;
+                color: #b9b9ff; font-weight: 700; padding: 0 6px;
                 background-color: transparent;
             }
-            QMessageBox QPushButton {
-                background-color: #0078d4;
-                border: none;
-                color: white;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-weight: bold;
-                min-width: 80px;
+
+            /* Inputs */
+            QLineEdit, QComboBox {
+                min-height: 38px; padding: 6px 12px; border-radius: 10px; font-size: 13px;
+                background-color: #1a1d26; color: #ffffff;
+                border: 1px solid #3a4056;
             }
-            QMessageBox QPushButton:hover {
-                background-color: #106ebe;
+            QLineEdit:focus, QComboBox:focus { border: 1px solid #6a6fff; }
+            QComboBox { padding-right: 42px; }
+            QComboBox::drop-down {
+                subcontrol-origin: padding; subcontrol-position: center right;
+                border-left: 1px solid #3a4056; background: #151824; width: 20px;
+                border-top-right-radius: 10px; border-bottom-right-radius: 10px;
             }
+            QComboBox::down-arrow {
+                /* seta custom visível e mais grossa */
+                image: url(:/qt-project.org/styles/commonstyle/images/arrowdown-16.png);
+                width: 14px; height: 14px; margin-right: 10px; margin-top: 1px; margin-left: 10px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #1a1d26; color: #ffffff; selection-background-color: #4d58ff;
+                border: 1px solid #2b3040; border-radius: 8px; }
+
+            /* Botões */
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                          stop:0 #4d58ff, stop:1 #8a46ff);
+                border: none; color: white; padding: 11px 20px; border-radius: 10px;
+                font-weight: 700; letter-spacing: 0.3px; font-size: 13px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                          stop:0 #5a63ff, stop:1 #9b52ff);
+            }
+            QPushButton:pressed { background-color: #3b3fc9; }
+
+            QPushButton#usb {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                          stop:0 #ff7a45, stop:1 #ff4c68);
+            }
+            QPushButton#usb:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                          stop:0 #ff8a5b, stop:1 #ff5e79);
+            }
+            QPushButton#main {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                          stop:0 #19c37d, stop:1 #13a06f);
+                font-size: 15px; padding: 14px 24px; border-radius: 12px;
+            }
+            QPushButton#main:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                          stop:0 #22d28a, stop:1 #17b67f);
+            }
+
+            /* Checkboxes */
+            QCheckBox { color: #e6e6e6; font-size: 12px; }
+            QCheckBox::indicator { width: 20px; height: 20px; }
+            QCheckBox::indicator:unchecked { border: 2px solid #2b3040; background: #141822; border-radius: 4px; }
+            QCheckBox::indicator:checked   { border: 2px solid #4d58ff; background: #4d58ff; border-radius: 4px; }
+
+            /* Labels de status */
+            QLabel#status { font-size: 11px; padding: 6px 10px; border-radius: 8px; }
+
+            /* TextEdit / Logs */
+            QTextEdit {
+                background-color: #0f121a; border: 1px solid #23283a;
+                border-radius: 12px; color: #dcdcdc; font-size: 11px;
+            }
+
+            /* Dialogs */
+            QMessageBox { background-color: #121521; color: white; }
+            QMessageBox QLabel { color: white; background-color: transparent; font-size: 12px; }
+            QMessageBox QPushButton { background-color: #4d58ff; border: none; color: white;
+                padding: 8px 16px; border-radius: 8px; font-weight: 700; min-width: 90px; }
+            QMessageBox QPushButton:hover { background-color: #5a63ff; }
+
+            /* Barra de progresso */
+            QProgressBar { border: 1px solid #2b3040; border-radius: 10px; text-align: center; background: #141822; color: #ddd; }
+            QProgressBar::chunk { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4d58ff, stop:1 #8a46ff); border-radius: 8px; }
         """)
 
-        # Widget central
+        # Widget central com layout principal
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
-        # Layout principal
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(20)
-        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(14)
+        main_layout.setContentsMargins(16, 14, 16, 14)
 
-        # Título
-        title_label = QLabel("Configurador DPI")
-        title_label.setObjectName("title")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(title_label)
-
+        # Cabeçalho hero
+        self.create_header(main_layout)
+        
         # Seção USB
         self.create_usb_section(main_layout)
         
@@ -1674,8 +1585,78 @@ class ConfiguradorDPI(QMainWindow):
         # Rodapé
         self.create_footer(main_layout)
 
+        # Garantir seta visível no QComboBox específico (panel_combo)
+        try:
+            arrow_svg = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'arrow_down_white.svg')
+            if not os.path.exists(arrow_svg):
+                svg_content = """
+<svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <path d="M6 9l6 6 6-6" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+"""
+                with open(arrow_svg, 'w', encoding='utf-8') as f:
+                    f.write(svg_content)
+            svg_path = arrow_svg.replace('\\', '/')
+            # aplica somente ao combo de painel
+            self.panel_combo.setStyleSheet(self.panel_combo.styleSheet() + f" QComboBox::down-arrow {{ image: url({svg_path}); width: 12px; height: 12px; margin-right: 10px; }}")
+        except Exception as e:
+            print(f"Falha ao aplicar seta customizada: {e}")
+
+    def create_header(self, parent_layout):
+        hero = QFrame()
+        hero.setObjectName("Hero")
+        h_layout = QHBoxLayout(hero)
+        h_layout.setContentsMargins(24, 18, 24, 18)
+        h_layout.setSpacing(16)
+
+        left = QVBoxLayout()
+        title = QLabel("Configurador de Mini PCS")
+        title.setObjectName("HeroTitle")
+        subtitle = QLabel("Instalação rápida por USB, Wi‑Fi, remoção de apps, DPI, TTS e auto‑start.")
+        subtitle.setWordWrap(True)
+        subtitle.setObjectName("HeroSubtitle")
+        left.addWidget(title)
+        left.addWidget(subtitle)
+
+        # Faixa decorativa vertical (animada)
+        ribbon = AnimatedLineWidget()
+
+        # Lado direito com badge e pequeno ícone 
+        right_box = QVBoxLayout()
+        right_box.setSpacing(6)
+        badge = QLabel("v8.5")
+        badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        badge.setStyleSheet("padding:6px 10px; border-radius:8px; background-color: rgba(106,111,255,0.18); font-weight:700;")
+        right_box.addWidget(badge, alignment=Qt.AlignmentFlag.AlignRight)
+        mark = QLabel("●")
+        mark.setStyleSheet("color:#6a6fff; font-size:18px;")
+        right_box.addWidget(mark, alignment=Qt.AlignmentFlag.AlignRight)
+        right_box.addStretch()
+
+        h_layout.addLayout(left, stretch=10)
+        h_layout.addWidget(ribbon)
+        h_layout.addLayout(right_box, stretch=1)
+
+        # Sombra sutil no hero
+        effect = QGraphicsDropShadowEffect()
+        effect.setBlurRadius(26)
+        effect.setColor(QColor(0, 0, 0, 160))
+        effect.setOffset(0, 12)
+        hero.setGraphicsEffect(effect)
+
+        parent_layout.addWidget(hero)
+
+    def _apply_card_effect(self, widget: QWidget):
+        widget.setObjectName("Card")
+        effect = QGraphicsDropShadowEffect()
+        effect.setBlurRadius(24)
+        effect.setColor(QColor(0, 0, 0, 140))
+        effect.setOffset(0, 12)
+        widget.setGraphicsEffect(effect)
+
     def create_devices_section(self, parent_layout):
         devices_group = QGroupBox("Configuração de Dispositivos por Wi-Fi")
+        self._apply_card_effect(devices_group)
         devices_layout = QVBoxLayout(devices_group)
         
         # Container para os dois dispositivos
@@ -1683,12 +1664,18 @@ class ConfiguradorDPI(QMainWindow):
         
         # Dispositivo 1
         device1_group = QGroupBox("Dispositivo 1")
+        device1_group.setStyleSheet(
+            "QGroupBox{border:1px solid #3a4056; border-radius:8px; margin-top:6px; padding-top:2px;}"
+            " QGroupBox::title{subcontrol-origin: margin; left:10px; top:-4px; color:#c8cbe0;}"
+        )
         device1_layout = QVBoxLayout(device1_group)
         
         # IP do dispositivo 1
         ip_layout1 = QVBoxLayout()
         ip_label1 = QLabel("Endereço IP:")
         self.ip_entry1 = QLineEdit()
+        self.ip_entry1.setMinimumWidth(320)
+        self.ip_entry1.setMinimumHeight(38)
         self.ip_entry1.setText(self.last_ip)
         ip_layout1.addWidget(ip_label1)
         ip_layout1.addWidget(self.ip_entry1)
@@ -1699,27 +1686,35 @@ class ConfiguradorDPI(QMainWindow):
         dpi_label1 = QLabel("DPI:")
         self.dpi_entry1 = QLineEdit()
         self.dpi_entry1.setText(self.last_dpi)
-        self.dpi_entry1.setMaximumWidth(100)
+        self.dpi_entry1.setMinimumHeight(38)
+        self.dpi_entry1.setMaximumWidth(120)
         dpi_layout1.addWidget(dpi_label1)
         dpi_layout1.addWidget(self.dpi_entry1)
         device1_layout.addLayout(dpi_layout1)
         
         # Status do dispositivo 1
         self.status_label1 = QLabel("Dispositivo não conectado")
+        self.status_label1.setMinimumHeight(26)
         self.status_label1.setObjectName("status")
-        self.status_label1.setStyleSheet("color: #ff6b6b; background-color: #2d2d2d;")
+        self.status_label1.setStyleSheet("color: #ff6b6b; background-color: #1a1d26;")
         device1_layout.addWidget(self.status_label1)
         
         devices_container.addWidget(device1_group)
         
         # Dispositivo 2
         device2_group = QGroupBox("Dispositivo 2")
+        device2_group.setStyleSheet(
+            "QGroupBox{border:1px solid #3a4056; border-radius:8px; margin-top:6px; padding-top:2px;}"
+            " QGroupBox::title{subcontrol-origin: margin; left:10px; top:-4px; color:#c8cbe0;}"
+        )
         device2_layout = QVBoxLayout(device2_group)
         
         # IP do dispositivo 2
         ip_layout2 = QVBoxLayout()
         ip_label2 = QLabel("Endereço IP:")
         self.ip_entry2 = QLineEdit()
+        self.ip_entry2.setMinimumWidth(320)
+        self.ip_entry2.setMinimumHeight(38)
         self.ip_entry2.setText(self.last_ip2)
         ip_layout2.addWidget(ip_label2)
         ip_layout2.addWidget(self.ip_entry2)
@@ -1730,15 +1725,17 @@ class ConfiguradorDPI(QMainWindow):
         dpi_label2 = QLabel("DPI:")
         self.dpi_entry2 = QLineEdit()
         self.dpi_entry2.setText(self.last_dpi2)
-        self.dpi_entry2.setMaximumWidth(100)
+        self.dpi_entry2.setMinimumHeight(38)
+        self.dpi_entry2.setMaximumWidth(120)
         dpi_layout2.addWidget(dpi_label2)
         dpi_layout2.addWidget(self.dpi_entry2)
         device2_layout.addLayout(dpi_layout2)
         
         # Status do dispositivo 2
         self.status_label2 = QLabel("Dispositivo não conectado")
+        self.status_label2.setMinimumHeight(26)
         self.status_label2.setObjectName("status")
-        self.status_label2.setStyleSheet("color: #ff6b6b; background-color: #2d2d2d;")
+        self.status_label2.setStyleSheet("color: #ff6b6b; background-color: #1a1d26;")
         device2_layout.addWidget(self.status_label2)
         
         devices_container.addWidget(device2_group)
@@ -1763,6 +1760,7 @@ class ConfiguradorDPI(QMainWindow):
 
     def create_apps_section(self, parent_layout):
         apps_group = QGroupBox("Aplicativos para Remover")
+        self._apply_card_effect(apps_group)
         apps_layout = QVBoxLayout(apps_group)
         
         # Layout horizontal compacto
@@ -1771,7 +1769,7 @@ class ConfiguradorDPI(QMainWindow):
         # Info sobre quantos apps serão removidos
         apps_count = len([app for app, enabled in self.app_manager.default_apps.items() if enabled])
         info_label = QLabel(f"Apps selecionados para remoção: {apps_count}")
-        info_label.setStyleSheet("color: #888888; font-size: 11px;")
+        info_label.setStyleSheet("color: #aeb2c0; font-size: 11px;")
         apps_info_layout.addWidget(info_label)
         
         apps_info_layout.addStretch()
@@ -1787,6 +1785,16 @@ class ConfiguradorDPI(QMainWindow):
         apps_info_layout.addWidget(list_apps_button)
         
         apps_layout.addLayout(apps_info_layout)
+        
+        # Container visual para exibir checkboxes adicionados dinamicamente
+        self.app_checkboxes = getattr(self, 'app_checkboxes', {})
+        self.apps_container = QVBoxLayout()
+        self.apps_container.setSpacing(6)
+        chips_hint = QLabel("Apps escolhidos serão listados abaixo. Use 'Listar Instalados' para adicionar mais.")
+        chips_hint.setStyleSheet("color:#8f95a5; font-size:10px;")
+        apps_layout.addWidget(chips_hint)
+        apps_layout.addLayout(self.apps_container)
+        
         parent_layout.addWidget(apps_group)
 
     def add_app_checkbox(self, app_name, checked=True):
@@ -1802,6 +1810,18 @@ class ConfiguradorDPI(QMainWindow):
         self.main_button.setObjectName("main")
         self.main_button.clicked.connect(self.change_dpi)
         parent_layout.addWidget(self.main_button)
+        
+        # Ocultar temporariamente o botão principal (sem quebrar a lógica)
+        self.main_button.setVisible(False)
+        
+        # Redução de altura: botão extra desativado temporariamente
+        # extra_row = QHBoxLayout()
+        # extra_row.addStretch()
+        # extra_usb = QPushButton("USB (extra)")
+        # extra_usb.setObjectName("usb")
+        # extra_usb.clicked.connect(self.connect_usb_device)
+        # extra_row.addWidget(extra_usb)
+        # parent_layout.addLayout(extra_row)
 
     def create_result_area(self, parent_layout):
         self.result_text = QTextEdit()
@@ -1833,6 +1853,31 @@ class ConfiguradorDPI(QMainWindow):
         footer_layout.addWidget(name_button)
         
         footer_layout.addStretch()
+        
+        # Botão discreto de buscar atualizações
+        self.update_button = QPushButton("⟳ Buscar Atualizações")
+        self.update_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #666666;
+                border: 1px solid #444444;
+                border-radius: 3px;
+                font-size: 9px;
+                padding: 3px 8px;
+                margin-right: 10px;
+            }
+            QPushButton:hover {
+                color: #0078d4;
+                border-color: #0078d4;
+                background-color: rgba(0, 120, 212, 0.1);
+            }
+            QPushButton:disabled {
+                color: #444444;
+                border-color: #333333;
+            }
+        """)
+        self.update_button.clicked.connect(self.check_updates_manual)
+        footer_layout.addWidget(self.update_button)
         
         # Botões de redes sociais
         linkedin_button = QPushButton("in")
@@ -1871,7 +1916,7 @@ class ConfiguradorDPI(QMainWindow):
         github_button.clicked.connect(lambda: self.open_url("https://github.com/ruafernd/"))
         footer_layout.addWidget(github_button)
         
-        version_label = QLabel("v5.0")
+        version_label = QLabel("v8.5")
         version_label.setStyleSheet("color: #888888; font-size: 10px;")
         footer_layout.addWidget(version_label)
         
@@ -1879,6 +1924,7 @@ class ConfiguradorDPI(QMainWindow):
 
     def create_usb_section(self, parent_layout):
         usb_group = QGroupBox("Configuração USB - Instalação Automática")
+        self._apply_card_effect(usb_group)
         usb_layout = QVBoxLayout(usb_group)
         
         # Layout principal horizontal
@@ -1897,7 +1943,7 @@ class ConfiguradorDPI(QMainWindow):
         
         # Info sobre localização dos APKs
         info_label = QLabel(f"Pasta: {self.apk_manager.get_base_path()}")
-        info_label.setStyleSheet("color: #888888; font-size: 10px; font-style: italic;")
+        info_label.setStyleSheet("color: #aeb2c0; font-size: 10px; font-style: italic;")
         right_layout.addWidget(info_label)
         
         # Botões na horizontal
@@ -1905,32 +1951,13 @@ class ConfiguradorDPI(QMainWindow):
         
         # Botão para abrir pasta
         open_folder_button = QPushButton("Abrir Pasta")
-        open_folder_button.setStyleSheet("""
-            QPushButton {
-                background-color: #6c757d;
-                font-size: 10px;
-                padding: 5px 10px;
-                min-width: 100px;
-            }
-            QPushButton:hover {
-                background-color: #5a6268;
-            }
-        """)
+        open_folder_button.setStyleSheet("background: #32384a; font-size: 12px; padding: 8px 14px;")
         open_folder_button.clicked.connect(self.open_apk_folder)
         buttons_layout.addWidget(open_folder_button)
         
         # Botão USB
         usb_button = QPushButton("Configurar Rápido")
         usb_button.setObjectName("usb")
-        usb_button.setStyleSheet("""
-            QPushButton#usb {
-                background-color: #ff6b35;
-                min-width: 100px;
-            }
-            QPushButton#usb:hover {
-                background-color: #e55a2b;
-            }
-        """)
         usb_button.clicked.connect(self.configure_usb_device)
         buttons_layout.addWidget(usb_button)
         
@@ -2240,6 +2267,688 @@ class ConfiguradorDPI(QMainWindow):
         self.result_text.append(result)
         self.main_button.setEnabled(True)
         self.main_button.setText("Alterar DPI e Remover Apps")
+
+    def apply_window_icon(self):
+        """Aplica o ícone da janela priorizando o ícone embutido no executável.
+        Fallback para arquivos .ico empacotados e, por fim, caminhos alternativos.
+        """
+        try:
+            # 0) Se compilado, tentar um .ico ao lado do executável com o mesmo basename
+            if getattr(sys, 'frozen', False):
+                exe_path = sys.executable
+                exe_dir = os.path.dirname(exe_path)
+                exe_base = os.path.splitext(os.path.basename(exe_path))[0]
+                side_candidates = [
+                    os.path.join(exe_dir, exe_base + '.ico'),
+                    os.path.join(exe_dir, 'app.ico'),
+                ]
+                # procurar qualquer .ico no diretório como último recurso local
+                try:
+                    for f in os.listdir(exe_dir):
+                        if f.lower().endswith('.ico'):
+                            side_candidates.append(os.path.join(exe_dir, f))
+                except Exception:
+                    pass
+                for cand in side_candidates:
+                    if os.path.exists(cand):
+                        ic = QIcon(cand)
+                        if not ic.isNull():
+                            self.setWindowIcon(ic)
+                            QApplication.setWindowIcon(ic)
+                            print(f"Ícone aplicado via .ico ao lado do exe: {cand}")
+                            return
+
+            # 1) Tentar usar o ícone do executável (quando compilado) usando WinAPI
+            if os.name == 'nt' and getattr(sys, 'frozen', False):
+                exe_path = sys.executable
+                try:
+                    import ctypes
+                    from ctypes import wintypes
+                    # Tentar obter ícone grande via SHGetFileInfo
+                    SHGFI_ICON = 0x000000100
+                    SHGFI_LARGEICON = 0x000000000
+                    shinfo = wintypes.SHFILEINFOW()
+                    shell32 = ctypes.windll.shell32
+                    res = shell32.SHGetFileInfoW(exe_path, 0, ctypes.byref(shinfo), ctypes.sizeof(shinfo), SHGFI_ICON | SHGFI_LARGEICON)
+                    if res:
+                        hicon = shinfo.hIcon
+                        try:
+                            try:
+                                from PyQt6.QtWinExtras import QtWin  # type: ignore
+                                pm = QtWin.fromHICON(hicon)
+                                if pm and not pm.isNull():
+                                    icon = QIcon(pm)
+                                    self.setWindowIcon(icon)
+                                    QApplication.setWindowIcon(icon)
+                                    print("Ícone aplicado a partir do executável (WinAPI)")
+                                    ctypes.windll.user32.DestroyIcon(hicon)
+                                    return
+                            except Exception:
+                                pass
+                        finally:
+                            try:
+                                ctypes.windll.user32.DestroyIcon(hicon)
+                            except Exception:
+                                pass
+                except Exception as e:
+                    print(f"Falha WinAPI ao obter ícone: {e}")
+
+                exe_icon = QIcon(exe_path)
+                if not exe_icon.isNull():
+                    self.setWindowIcon(exe_icon)
+                    QApplication.setWindowIcon(exe_icon)
+                    print("Ícone aplicado a partir do executável (fallback QIcon)")
+                    return
+
+            # 2) Tentar ícones empacotados (PyInstaller --add-data)
+            for name in ("app.ico", "logoAI_preto.ico", "logo.ico"):
+                path = resource_path(name)
+                if os.path.exists(path):
+                    ic = QIcon(path)
+                    if not ic.isNull():
+                        self.setWindowIcon(ic)
+                        QApplication.setWindowIcon(ic)
+                        print(f"Ícone aplicado via recurso: {path}")
+                        return
+
+            # 3) Caminho alternativo conhecido
+            alt_icon_path = r"C:\Users\RuaF\Downloads\logoAI_preto.ico"
+            if os.path.exists(alt_icon_path):
+                ic = QIcon(alt_icon_path)
+                if not ic.isNull():
+                    self.setWindowIcon(ic)
+                    QApplication.setWindowIcon(ic)
+                    print(f"Ícone aplicado via caminho alternativo: {alt_icon_path}")
+                    return
+
+            print("Não foi possível definir o ícone da janela")
+        except Exception as e:
+            print(f"Erro ao aplicar ícone da janela: {e}")
+
+class UpdateManager:
+    def __init__(self):
+        # Configuração do Firebase Realtime Database (gratuito)
+        self.firebase_url = "https://seu-projeto-firebase-default-rtdb.firebaseio.com/"
+        self.current_version = "8.5"  # Versão atual do aplicativo
+        self.app_name = "ConfiguradorDPI"
+        
+        # Alternativa gratuita: GitHub Releases
+        self.github_repo = "ruafernd/minipcs-releases"  # Seu repositório para releases
+        self.use_github = True  # True = usar GitHub, False = usar Firebase Storage
+        
+    def check_for_updates(self):
+        """Verifica se há atualizações disponíveis"""
+        try:
+            if self.use_github:
+                return self._check_github_releases()
+            else:
+                return self._check_firebase_updates()
+                
+        except Exception as e:
+            return {'update_available': False, 'error': f'Erro inesperado: {str(e)}'}
+    
+    def _check_github_releases(self):
+        """Verifica atualizações no GitHub Releases (GRATUITO)"""
+        try:
+            # API do GitHub para releases
+            url = f"https://api.github.com/repos/{self.github_repo}/releases/latest"
+            
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                
+                latest_version = data.get('tag_name', '0.0').replace('v', '')  # Remove 'v' se houver
+                changelog = data.get('body', 'Sem informações de mudanças.')
+                
+                # Debug: listar todos os assets disponíveis
+                assets = data.get('assets', [])
+                print(f"DEBUG: Assets encontrados: {len(assets)}")
+                for asset in assets:
+                    print(f"DEBUG: Asset: {asset['name']} - {asset['browser_download_url']}")
+                
+                # Procurar arquivo .exe ou .zip nos assets (busca mais flexível)
+                download_url = None
+                file_type = None
+                
+                # Prioridade: .exe primeiro, depois .zip
+                for asset in assets:
+                    asset_name = asset['name'].lower()
+                    if asset_name.endswith('.exe'):
+                        download_url = asset['browser_download_url']
+                        file_type = 'exe'
+                        print(f"DEBUG: Encontrado EXE: {asset['name']}")
+                        break
+                
+                # Se não encontrou .exe, procurar .zip
+                if not download_url:
+                    for asset in assets:
+                        asset_name = asset['name'].lower()
+                        if asset_name.endswith('.zip'):
+                            download_url = asset['browser_download_url']
+                            file_type = 'zip'
+                            print(f"DEBUG: Encontrado ZIP: {asset['name']}")
+                            break
+                
+                # Se ainda não encontrou, procurar qualquer arquivo binário comum
+                if not download_url:
+                    for asset in assets:
+                        asset_name = asset['name'].lower()
+                        if any(ext in asset_name for ext in ['.msi', '.deb', '.rpm', '.dmg', '.pkg']):
+                            download_url = asset['browser_download_url']
+                            file_type = 'other'
+                            print(f"DEBUG: Encontrado outro tipo: {asset['name']}")
+                            break
+                
+                if not download_url:
+                    error_msg = f'Nenhum arquivo executável encontrado. Assets disponíveis: {[asset["name"] for asset in assets]}'
+                    print(f"DEBUG: {error_msg}")
+                    return {'update_available': False, 'error': error_msg}
+                
+                # Verificar se é versão obrigatória (baseado em tag ou descrição)
+                mandatory = 'OBRIGATÓRIA' in changelog.upper() or 'MANDATORY' in changelog.upper()
+                
+                # Comparar versões
+                if self.is_newer_version(latest_version, self.current_version):
+                    return {
+                        'update_available': True,
+                        'version': latest_version,
+                        'download_url': download_url,
+                        'file_type': file_type,
+                        'changelog': changelog,
+                        'mandatory': mandatory,
+                        'current_version': self.current_version
+                    }
+                else:
+                    return {'update_available': False}
+            else:
+                return {'update_available': False, 'error': f'Erro GitHub API: {response.status_code}'}
+                
+        except requests.RequestException as e:
+            return {'update_available': False, 'error': f'Erro de conexão GitHub: {str(e)}'}
+    
+    def _check_firebase_updates(self):
+        """Verifica atualizações no Firebase (método original)"""
+        try:
+            # URL para buscar informações da versão mais recente
+            url = f"{self.firebase_url}/updates/{self.app_name}.json"
+            
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data:
+                    latest_version = data.get('version', '0.0')
+                    download_url = data.get('download_url', '')
+                    changelog = data.get('changelog', 'Sem informações de mudanças.')
+                    mandatory = data.get('mandatory', False)
+                    file_type = data.get('file_type', 'zip')  # Padrão ZIP se não especificado
+                    
+                    # Comparar versões (versão simples)
+                    if self.is_newer_version(latest_version, self.current_version):
+                        return {
+                            'update_available': True,
+                            'version': latest_version,
+                            'download_url': download_url,
+                            'file_type': file_type,
+                            'changelog': changelog,
+                            'mandatory': mandatory,
+                            'current_version': self.current_version
+                        }
+                    else:
+                        return {'update_available': False}
+                else:
+                    return {'update_available': False, 'error': 'Dados não encontrados'}
+            else:
+                return {'update_available': False, 'error': f'Erro HTTP: {response.status_code}'}
+                
+        except requests.RequestException as e:
+            return {'update_available': False, 'error': f'Erro de conexão: {str(e)}'}
+    
+    def is_newer_version(self, latest, current):
+        """Compara duas versões no formato X.Y"""
+        try:
+            latest_parts = [int(x) for x in latest.split('.')]
+            current_parts = [int(x) for x in current.split('.')]
+            
+            # Preencher com zeros se necessário
+            max_len = max(len(latest_parts), len(current_parts))
+            latest_parts.extend([0] * (max_len - len(latest_parts)))
+            current_parts.extend([0] * (max_len - len(current_parts)))
+            
+            return latest_parts > current_parts
+        except:
+            return False
+    
+    def download_update(self, download_url, file_type='zip', progress_callback=None):
+        """Baixa a atualização (funciona com GitHub ou Firebase)"""
+        try:
+            # Criar pasta temporária para download
+            temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp_update')
+            if not os.path.exists(temp_dir):
+                os.makedirs(temp_dir)
+            
+            # Nome do arquivo baseado no asset original
+            filename = os.path.basename(urlparse(download_url).path)
+            if not filename:
+                filename = 'update.bin'
+            
+            file_path = os.path.join(temp_dir, filename)
+            
+            # Download com progresso
+            response = requests.get(download_url, stream=True, timeout=30)
+            response.raise_for_status()
+            
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded_size = 0
+            
+            with open(file_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded_size += len(chunk)
+                        if progress_callback and total_size > 0:
+                            progress = int((downloaded_size / total_size) * 100)
+                            progress_callback(progress)
+            
+            return file_path
+            
+        except Exception as e:
+            return None, str(e)
+    
+    def install_update(self, file_path):
+        """Instala a atualização baixada (ZIP ou EXE) sem reiniciar automaticamente.
+        - Para EXE: substitui o executável atual pelo novo mantendo o mesmo nome (fechando o app e sem abrir novamente).
+        - Para ZIP: extrai para uma subpasta de atualização e instrui o usuário a fechar o app e abrir o novo executável.
+        """
+        try:
+            # Detectar o executável atual corretamente
+            if getattr(sys, 'frozen', False):
+                current_exe = sys.executable
+            else:
+                current_exe = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'minipcs.exe')
+
+            app_dir = os.path.dirname(current_exe)
+
+            # EXE direto: substituir mantendo o mesmo nome do executável atual
+            if file_path.lower().endswith('.exe'):
+                try:
+                    # Caminhos normalizados
+                    target_exe = current_exe  # manter exatamente o mesmo nome
+                    exe_name = os.path.basename(target_exe)
+
+                    # Preparar pasta temporária segura no %TEMP%
+                    temp_root = os.path.join(os.environ.get('TEMP', os.path.dirname(file_path)), 'MiniPcsUpdate')
+                    if not os.path.exists(temp_root):
+                        os.makedirs(temp_root, exist_ok=True)
+                    staged_new_exe = os.path.join(temp_root, exe_name)
+
+                    # Copiar o novo EXE para a área temporária com o mesmo nome do alvo
+                    try:
+                        if os.path.abspath(file_path) != os.path.abspath(staged_new_exe):
+                            shutil.copy2(file_path, staged_new_exe)
+                    except Exception as e:
+                        return False, f"Erro ao preparar arquivo de atualização: {str(e)}"
+
+                    # Criar script PowerShell que aguarda o app fechar, substitui e não abre novamente
+                    ps_script = f'''
+$ErrorActionPreference = 'SilentlyContinue'
+$exePath = "{target_exe}"
+$newExe = "{staged_new_exe}"
+$procName = [System.IO.Path]::GetFileNameWithoutExtension($exePath)
+$tempRoot = "{temp_root}"
+
+# Esperar o processo finalizar
+for ($i=0; $i -lt 240; $i++) {{
+    $p = Get-Process -Name $procName -ErrorAction SilentlyContinue
+    if (-not $p) {{ break }}
+    Start-Sleep -Milliseconds 250
+}}
+
+# Substituição segura mantendo o mesmo nome
+try {{
+    if (Test-Path ($exePath + '.old')) {{ Remove-Item ($exePath + '.old') -Force -ErrorAction SilentlyContinue }}
+    if (Test-Path $exePath) {{ Rename-Item $exePath ($exePath + '.old') -Force -ErrorAction SilentlyContinue }}
+    Move-Item $newExe $exePath -Force -ErrorAction SilentlyContinue
+}} catch {{
+    try {{ Copy-Item $newExe $exePath -Force -ErrorAction SilentlyContinue }} catch {{}}
+}}
+
+# Remover o antigo se sobrou .old
+try {{ if (Test-Path ($exePath + '.old')) {{ Remove-Item ($exePath + '.old') -Force -ErrorAction SilentlyContinue }} }} catch {{}}
+
+# Limpeza (novo arquivo já movido)
+try {{ if (Test-Path $tempRoot) {{ Remove-Item $tempRoot -Recurse -Force -ErrorAction SilentlyContinue }} }} catch {{}}
+
+# Não reabrir automaticamente; usuário abrirá manualmente
+# Remover o script
+Remove-Item $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
+'''
+                    script_path = os.path.join(temp_root, 'apply_update.ps1')
+                    with open(script_path, 'w', encoding='utf-8') as f:
+                        f.write(ps_script)
+
+                    # Executar o script em background e fechar o app em seguida
+                    try:
+                        subprocess.Popen([
+                            'powershell.exe', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass',
+                            '-File', script_path
+                        ], creationflags=subprocess.CREATE_NO_WINDOW)
+                    except Exception:
+                        pass
+
+                    # Fechar o app para permitir a substituição
+                    QTimer.singleShot(300, QApplication.instance().quit)
+
+                    message = (
+                        "Atualização aplicada.\n\n"
+                        f"O aplicativo será fechado para aplicar a atualização. O arquivo foi substituído em: {target_exe}\n\n"
+                        "Abra o executável novamente manualmente (duplo clique no mesmo atalho/arquivo)."
+                    )
+                    return True, message
+                except Exception as e:
+                    return False, f"Erro ao preparar substituição do executável: {str(e)}"
+
+            # ZIP: extrair e instruir o usuário
+            extract_dir = os.path.join(os.path.dirname(file_path), 'Update_Extracted')
+            try:
+                if os.path.exists(extract_dir):
+                    shutil.rmtree(extract_dir)
+                with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                    zip_ref.extractall(extract_dir)
+            except Exception as e:
+                return False, f"Erro ao extrair atualização: {str(e)}"
+
+            # Procurar um executável dentro do ZIP extraído
+            exe_files = []
+            for root, dirs, files in os.walk(extract_dir):
+                for file in files:
+                    if file.lower().endswith('.exe'):
+                        exe_files.append(os.path.join(root, file))
+
+            if exe_files:
+                new_exe = exe_files[0]
+                is_valid, msg = self.validate_executable(new_exe)
+                if not is_valid:
+                    return False, f"Executável inválido no pacote: {msg}"
+                message = (
+                    "Atualização preparada com sucesso.\n\n"
+                    f"Novo executável localizado em: {new_exe}\n\n"
+                    "Feche este aplicativo e substitua manualmente o executável antigo mantendo o mesmo nome."
+                )
+                return True, message
+            else:
+                return False, "Nenhum executável encontrado no pacote de atualização."
+
+        except Exception as e:
+            return False, f"Erro ao instalar atualização: {str(e)}"
+
+    def validate_executable(self, exe_path):
+        """Valida se o executável é compatível"""
+        try:
+            # Verificar se o arquivo existe e não está corrompido
+            if not os.path.exists(exe_path):
+                return False, "Arquivo não encontrado"
+            
+            # Verificar tamanho mínimo (deve ter pelo menos 1MB)
+            file_size = os.path.getsize(exe_path)
+            if file_size < 1024 * 1024:  # 1MB
+                return False, "Arquivo muito pequeno, pode estar corrompido"
+            
+            # Verificar se é um executável Windows válido
+            with open(exe_path, 'rb') as f:
+                # Ler os primeiros bytes para verificar assinatura PE
+                header = f.read(2)
+                if header != b'MZ':
+                    return False, "Não é um executável Windows válido"
+                
+                # Pular para o offset do PE header
+                f.seek(60)
+                pe_offset_bytes = f.read(4)
+                if len(pe_offset_bytes) < 4:
+                    return False, "Arquivo corrompido"
+                
+                pe_offset = int.from_bytes(pe_offset_bytes, byteorder='little')
+                f.seek(pe_offset)
+                pe_signature = f.read(4)
+                if pe_signature != b'PE\x00\x00':
+                    return False, "Assinatura PE inválida"
+            
+            return True, "Executável válido"
+            
+        except Exception as e:
+            return False, f"Erro na validação: {str(e)}"
+
+class UpdateWorkerThread(QThread):
+    """Thread para verificar atualizações em segundo plano"""
+    update_available = pyqtSignal(dict)
+    error_occurred = pyqtSignal(str)
+    
+    def __init__(self, update_manager):
+        super().__init__()
+        self.update_manager = update_manager
+    
+    def run(self):
+        try:
+            result = self.update_manager.check_for_updates()
+            if result.get('update_available'):
+                self.update_available.emit(result)
+            elif result.get('error'):
+                self.error_occurred.emit(result['error'])
+        except Exception as e:
+            self.error_occurred.emit(f"Erro ao verificar atualizações: {str(e)}")
+
+class DownloadWorkerThread(QThread):
+    """Thread para baixar atualizações"""
+    progress_updated = pyqtSignal(int)
+    download_finished = pyqtSignal(str)  # file_path
+    download_failed = pyqtSignal(str)    # error_message
+    
+    def __init__(self, update_manager, download_url, file_type='zip'):
+        super().__init__()
+        self.update_manager = update_manager
+        self.download_url = download_url
+        self.file_type = file_type
+    
+    def run(self):
+        try:
+            result = self.update_manager.download_update(
+                self.download_url, 
+                self.file_type,
+                progress_callback=self.progress_updated.emit
+            )
+            
+            if isinstance(result, tuple):  # Erro retornado
+                file_path, error = result
+                if error:
+                    self.download_failed.emit(error)
+                    return
+            
+            self.download_finished.emit(result)
+            
+        except Exception as e:
+            self.download_failed.emit(f"Erro no download: {str(e)}")
+
+class UpdateDialog(QDialog):
+    """Diálogo para mostrar informações de atualização"""
+    
+    def __init__(self, parent, update_info):
+        super().__init__(parent)
+        self.update_info = update_info
+        self.update_manager = parent.update_manager
+        self.init_ui()
+    
+    def init_ui(self):
+        self.setWindowTitle("Atualização Disponível")
+        self.setFixedSize(500, 400)
+        self.setModal(True)
+        
+        # Aplicar o mesmo tema escuro moderno
+        self.setStyleSheet("""
+            QDialog { background-color: #0f1116; color: #e6e6e6; }
+            QLabel { color: #e6e6e6; background-color: transparent; }
+            QPushButton { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4d58ff, stop:1 #8a46ff); border: none; color: white; padding: 10px 20px; border-radius: 10px; font-weight: 700; }
+            QPushButton:hover { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #5a63ff, stop:1 #9b52ff); }
+            QPushButton#cancel { background: #32384a; }
+            QPushButton#cancel:hover { background: #3b4257; }
+            QTextEdit { background-color: #0f121a; border: 1px solid #2b3040; border-radius: 10px; color: #e6e6e6; padding: 10px; }
+            QProgressBar { border: 1px solid #2b3040; border-radius: 10px; text-align: center; background-color: #141822; color: #e6e6e6; }
+            QProgressBar::chunk { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4d58ff, stop:1 #8a46ff); border-radius: 8px; }
+        """)
+        
+        layout = QVBoxLayout(self)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        # Título
+        title_label = QLabel("🚀 Nova Versão Disponível!")
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #4CAF50;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_label)
+        
+        # Informações da versão
+        version_info = QLabel(f"Versão Atual: {self.update_info['current_version']}\n"
+                             f"Nova Versão: {self.update_info['version']}")
+        version_info.setStyleSheet("font-size: 14px; padding: 10px; background-color: #121725; border: 1px solid #3a4056; border-radius: 10px;")
+        version_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(version_info)
+        
+        # Changelog
+        changelog_label = QLabel("📋 Novidades desta versão:")
+        changelog_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        layout.addWidget(changelog_label)
+        
+        changelog_text = QTextEdit()
+        changelog_text.setPlainText(self.update_info['changelog'])
+        changelog_text.setMaximumHeight(150)
+        changelog_text.setReadOnly(True)
+        layout.addWidget(changelog_text)
+        
+        # Barra de progresso (inicialmente oculta)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
+        
+        # Status label
+        self.status_label = QLabel("")
+        self.status_label.setStyleSheet("color: #aeb2c0; font-style: italic;")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.status_label)
+        
+        # Botões
+        buttons_layout = QHBoxLayout()
+        
+        if not self.update_info.get('mandatory', False):
+            cancel_button = QPushButton("Agora Não")
+            cancel_button.setObjectName("cancel")
+            cancel_button.clicked.connect(self.reject)
+            buttons_layout.addWidget(cancel_button)
+        
+        self.update_button = QPushButton("Atualizar Agora")
+        self.update_button.clicked.connect(self.start_update)
+        buttons_layout.addWidget(self.update_button)
+        
+        layout.addLayout(buttons_layout)
+        
+        # Se for obrigatória, mostrar aviso
+        if self.update_info.get('mandatory', False):
+            mandatory_label = QLabel("⚠️ Esta atualização é obrigatória")
+            mandatory_label.setStyleSheet("color: #ff6b35; font-weight: bold; text-align: center;")
+            mandatory_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.insertWidget(1, mandatory_label)
+    
+    def start_update(self):
+        """Inicia o processo de atualização"""
+        self.update_button.setEnabled(False)
+        self.update_button.setText("Baixando...")
+        self.progress_bar.setVisible(True)
+        self.status_label.setText("Baixando atualização...")
+        
+        # Iniciar download em thread separada
+        self.download_thread = DownloadWorkerThread(
+            self.update_manager, 
+            self.update_info['download_url'],
+            self.update_info['file_type']
+        )
+        self.download_thread.progress_updated.connect(self.update_progress)
+        self.download_thread.download_finished.connect(self.on_download_finished)
+        self.download_thread.download_failed.connect(self.on_download_failed)
+        self.download_thread.start()
+    
+    def update_progress(self, progress):
+        """Atualiza a barra de progresso"""
+        self.progress_bar.setValue(progress)
+        self.status_label.setText(f"Baixando... {progress}%")
+    
+    def on_download_finished(self, file_path):
+        """Chamado quando o download termina"""
+        self.status_label.setText("Instalando atualização...")
+        self.progress_bar.setVisible(False)
+        
+        # Instalar atualização
+        success, message = self.update_manager.install_update(file_path)
+        
+        if success:
+            self.status_label.setText("✅ " + message)
+            # Fechar aplicativo após breve pausa
+            QTimer.singleShot(2000, QApplication.instance().quit)
+        else:
+            self.status_label.setText("❌ " + message)
+            self.update_button.setEnabled(True)
+            self.update_button.setText("Tentar Novamente")
+    
+    def on_download_failed(self, error_message):
+        """Chamado quando o download falha"""
+        self.status_label.setText(f"❌ Erro: {error_message}")
+        self.progress_bar.setVisible(False)
+        self.update_button.setEnabled(True)
+        self.update_button.setText("Tentar Novamente")
+
+class AnimatedLineWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(6, 64)
+        self._phase = 0.0
+        self._direction = 1
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start(40)  # ~50fps
+
+    def _tick(self):
+        # Vai e volta entre 0 e 1
+        step = 0.01 * self._direction
+        self._phase += step
+        if self._phase >= 1.0:
+            self._phase = 1.0
+            self._direction = -1
+        elif self._phase <= 0.0:
+            self._phase = 0.0
+            self._direction = 1
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        w, h = self.width(), self.height()
+
+        # Fundo transparente
+        painter.fillRect(self.rect(), Qt.GlobalColor.transparent)
+
+        # Linha base com gradiente suave
+        grad = QLinearGradient(0, 0, 0, h)
+        grad.setColorAt(0.0, QColor(120, 96, 255, 180))
+        grad.setColorAt(1.0, QColor(120, 96, 255, 60))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(grad))
+        painter.drawRoundedRect(2, 0, 2, h, 2, 2)
+
+        # Glow que sobe/desce
+        glow_y = int((1.0 - self._phase) * (h - 18))  # 18px de altura do glow
+        glow_grad = QLinearGradient(0, glow_y, 0, glow_y + 18)
+        glow_grad.setColorAt(0.0, QColor(160, 140, 255, 0))
+        glow_grad.setColorAt(0.5, QColor(160, 140, 255, 220))
+        glow_grad.setColorAt(1.0, QColor(160, 140, 255, 0))
+        painter.setBrush(QBrush(glow_grad))
+        painter.drawRoundedRect(1, glow_y, 4, 18, 4, 4)
+        painter.end()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
