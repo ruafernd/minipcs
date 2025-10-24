@@ -971,17 +971,18 @@ class USBWorkerThread(QThread):
                     self.progress.emit("✅ DPI alterado com sucesso para 160!")
                 
                 # Configurar TTS para português brasileiro (apenas para painéis)
-                if "Painel" in self.panel_type:
-                    self.progress.emit("🗣️ Configurando síntese de voz para português brasileiro...")
-                    
-                    # Usar versão simplificada para evitar problemas de conexão
-                    tts_success, tts_message = self.adb_manager.configure_tts_portuguese_brazil_simple(device_id)
-                    if tts_success:
-                        self.progress.emit(f"✅ {tts_message}")
-                        self.progress.emit("ℹ️ TTS configurado: Google TTS, pt-BR, voz 5, velocidade normal")
-                    else:
-                        self.progress.emit(f"⚠️ Problema na configuração TTS: {tts_message}")
-                        self.progress.emit("ℹ️ Você pode configurar manualmente: Configurações → Acessibilidade → TTS")
+                # DESABILITADO: Instalação automática da síntese de voz comentada
+                # if "Painel" in self.panel_type:
+                #     self.progress.emit("🗣️ Configurando síntese de voz para português brasileiro...")
+                #     
+                #     # Usar versão simplificada para evitar problemas de conexão
+                #     tts_success, tts_message = self.adb_manager.configure_tts_portuguese_brazil_simple(device_id)
+                #     if tts_success:
+                #         self.progress.emit(f"✅ {tts_message}")
+                #         self.progress.emit("ℹ️ TTS configurado: Google TTS, pt-BR, voz 5, velocidade normal")
+                #     else:
+                #         self.progress.emit(f"⚠️ Problema na configuração TTS: {tts_message}")
+                #         self.progress.emit("ℹ️ Você pode configurar manualmente: Configurações → Acessibilidade → TTS")
                 
                 # Configurar auto-start do aplicativo principal (para painéis e totem)
                 if self.panel_type in ["Painel", "Totem"]:
@@ -1588,7 +1589,7 @@ class ConfiguradorDPI(QMainWindow):
         # Lado direito com badge e pequeno ícone 
         right_box = QVBoxLayout()
         right_box.setSpacing(6)
-        badge = QLabel("v10.4")
+        badge = QLabel("v10.5")
         badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         badge.setStyleSheet("padding:6px 10px; border-radius:8px; background-color: rgba(106,111,255,0.18); font-weight:700;")
         right_box.addWidget(badge, alignment=Qt.AlignmentFlag.AlignRight)
@@ -1892,7 +1893,7 @@ class ConfiguradorDPI(QMainWindow):
         github_button.clicked.connect(lambda: self.open_url("https://github.com/ruafernd/"))
         footer_layout.addWidget(github_button)
         
-        version_label = QLabel("v10.4")
+        version_label = QLabel("v10.5")
         version_label.setStyleSheet("color: #888888; font-size: 10px;")
         footer_layout.addWidget(version_label)
         
@@ -2345,7 +2346,7 @@ class UpdateManager:
     def __init__(self):
         # Configuração do Firebase Realtime Database (gratuito)
         self.firebase_url = "https://seu-projeto-firebase-default-rtdb.firebaseio.com/"
-        self.current_version = "10.4"  # Versão atual do aplicativo
+        self.current_version = "10.5"  # Versão atual do aplicativo
         self.app_name = "ConfiguradorDPI"
         
         # Alternativa gratuita: GitHub Releases
@@ -2620,7 +2621,7 @@ for ($i=0; $i -lt 240; $i++) {{
         Add-Type -AssemblyName System.Windows.Forms
         [System.Windows.Forms.MessageBox]::Show(
             "Atualizacao concluida com sucesso!`n`nVoce pode abrir o aplicativo normalmente.",
-            "MiniPCS - Atualizacao v10.4",
+            "MiniPCS - Atualizacao v10.5",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Information
         )
@@ -2649,7 +2650,7 @@ for ($i=0; $i -lt 240; $i++) {{
                         "Atualização será aplicada!\n\n"
                         f"O aplicativo será fechado para substituir o arquivo.\n"
                         f"Após a conclusão, abra o aplicativo normalmente.\n\n"
-                        f"Nova versão: v10.4"
+                        f"Nova versão: v10.5"
                     )
                     return True, message
                 except Exception as e:
