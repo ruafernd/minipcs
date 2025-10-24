@@ -386,8 +386,7 @@ class ADBManager:
             
             # Padrões de busca baseados no tipo de painel
             search_patterns = {
-                "Painel Amor Saúde": ["amor", "painel", "amorpainel", "love", "health", "roosevelt", "senha"],
-                "Painel Geral": ["geral", "painel", "general", "main", "roosevelt", "senha"],
+                "Painel": ["painel", "panel", "roosevelt", "senha", "ai"],
                 "Totem": ["totem", "ai", "kiosk", "display"]
             }
             
@@ -413,8 +412,7 @@ class ADBManager:
         try:
             # Definir pacotes corretos para cada tipo
             main_app_packages = {
-                "Painel Amor Saúde": "com.example.roosevelt.painel_senha_digital",
-                "Painel Geral": "com.example.roosevelt.painel_senha_digital", 
+                "Painel": "com.example.roosevelt.painel_senha_digital",
                 "Totem": "com.example.roosevelt.ai_autoatendimento"
             }
             
@@ -631,19 +629,15 @@ class APKManager:
         self.create_folder_structure()
         
         self.apk_lists = {
-            "Painel Amor Saúde": [
-                os.path.join(self.base_path, "Painel_Amor_Saude", "amor_painel.apk"),
-                os.path.join(self.base_path, "Painel_Amor_Saude", "adb.apk"),
-                os.path.join(self.base_path, "Painel_Amor_Saude", "sintese.apk")
-            ],
-            "Painel Geral": [
-                os.path.join(self.base_path, "Painel_Geral", "geral_painel.apk"),
-                os.path.join(self.base_path, "Painel_Geral", "adb.apk"),
-                os.path.join(self.base_path, "Painel_Geral", "sintese.apk")
+            "Painel": [
+                os.path.join(self.base_path, "Painel", "painel_ai.apk"),
+                os.path.join(self.base_path, "Painel", "adb.apk"),
+                os.path.join(self.base_path, "Painel", "sintese.apk")
             ],
             "Totem": [
                 os.path.join(self.base_path, "Totem", "totem_ai.apk"),
-                os.path.join(self.base_path, "Totem", "adb.apk")
+                os.path.join(self.base_path, "Totem", "adb.apk"),
+                os.path.join(self.base_path, "Totem", "sintese.apk")
             ]
         }
     
@@ -656,7 +650,7 @@ class APKManager:
                 print(f"Pasta criada: {self.base_path}")
             
             # Criar subpastas para cada configuração
-            folders = ["Painel_Amor_Saude", "Painel_Geral", "Totem"]
+            folders = ["Painel", "Totem"]
             for folder in folders:
                 folder_path = os.path.join(self.base_path, folder)
                 if not os.path.exists(folder_path):
@@ -678,7 +672,7 @@ class APKManager:
                 if not os.path.exists(self.base_path):
                     os.makedirs(self.base_path)
                 
-                folders = ["Painel_Amor_Saude", "Painel_Geral", "Totem"]
+                folders = ["Painel", "Totem"]
                 for folder in folders:
                     folder_path = os.path.join(self.base_path, folder)
                     if not os.path.exists(folder_path):
@@ -713,36 +707,13 @@ class APKManager:
                 template_file = os.path.join(folder_path, "TEMPLATE_Lista_de_APKs.txt")
                 
                 # Definir conteúdo do template baseado no tipo de painel
-                if folder_name == "Painel_Amor_Saude":
-                    content = """TEMPLATE - Painel Amor Saúde
-=====================================
+                if folder_name == "Painel":
+                    content = """TEMPLATE - Painel
+==================
 
 Coloque os seguintes arquivos APK nesta pasta:
 
-✓ amor_painel.apk
-✓ adb.apk
-✓ sintese.apk
-
-INSTRUÇÕES:
-1. Baixe os APKs necessários
-2. Renomeie-os conforme a lista acima
-3. Coloque-os nesta pasta
-4. Delete este arquivo de template
-5. Use a função "Configurar Rápido" no aplicativo
-
-NOTA: A configuração de auto-start é feita automaticamente 
-via comandos do sistema (não precisa mais do auto_start.apk)
-
-Pasta: {folder_path}
-""".format(folder_path=folder_path)
-                
-                elif folder_name == "Painel_Geral":
-                    content = """TEMPLATE - Painel Geral
-=======================
-
-Coloque os seguintes arquivos APK nesta pasta:
-
-✓ geral_painel.apk
+✓ painel_ai.apk
 ✓ adb.apk
 ✓ sintese.apk
 
@@ -793,19 +764,15 @@ Pasta: {folder_path}
     def update_apk_paths(self):
         """Atualiza os caminhos dos APKs após mudança do base_path"""
         self.apk_lists = {
-            "Painel Amor Saúde": [
-                os.path.join(self.base_path, "Painel_Amor_Saude", "amor_painel.apk"),
-                os.path.join(self.base_path, "Painel_Amor_Saude", "adb.apk"),
-                os.path.join(self.base_path, "Painel_Amor_Saude", "sintese.apk")
-            ],
-            "Painel Geral": [
-                os.path.join(self.base_path, "Painel_Geral", "geral_painel.apk"),
-                os.path.join(self.base_path, "Painel_Geral", "adb.apk"),
-                os.path.join(self.base_path, "Painel_Geral", "sintese.apk")
+            "Painel": [
+                os.path.join(self.base_path, "Painel", "painel_ai.apk"),
+                os.path.join(self.base_path, "Painel", "adb.apk"),
+                os.path.join(self.base_path, "Painel", "sintese.apk")
             ],
             "Totem": [
                 os.path.join(self.base_path, "Totem", "totem_ai.apk"),
-                os.path.join(self.base_path, "Totem", "adb.apk")
+                os.path.join(self.base_path, "Totem", "adb.apk"),
+                os.path.join(self.base_path, "Totem", "sintese.apk")
             ]
         }
     
@@ -1017,7 +984,7 @@ class USBWorkerThread(QThread):
                         self.progress.emit("ℹ️ Você pode configurar manualmente: Configurações → Acessibilidade → TTS")
                 
                 # Configurar auto-start do aplicativo principal (para painéis e totem)
-                if self.panel_type in ["Painel Amor Saúde", "Painel Geral", "Totem"]:
+                if self.panel_type in ["Painel", "Totem"]:
                     self.progress.emit("🚀 Configurando inicialização automática do aplicativo...")
                     
                     autostart_success, autostart_message = self.adb_manager.configure_app_autostart(device_id, self.panel_type)
@@ -1621,7 +1588,7 @@ class ConfiguradorDPI(QMainWindow):
         # Lado direito com badge e pequeno ícone 
         right_box = QVBoxLayout()
         right_box.setSpacing(6)
-        badge = QLabel("v8.6")
+        badge = QLabel("v10.4")
         badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         badge.setStyleSheet("padding:6px 10px; border-radius:8px; background-color: rgba(106,111,255,0.18); font-weight:700;")
         right_box.addWidget(badge, alignment=Qt.AlignmentFlag.AlignRight)
@@ -1925,7 +1892,7 @@ class ConfiguradorDPI(QMainWindow):
         github_button.clicked.connect(lambda: self.open_url("https://github.com/ruafernd/"))
         footer_layout.addWidget(github_button)
         
-        version_label = QLabel("v8.6")
+        version_label = QLabel("v10.4")
         version_label.setStyleSheet("color: #888888; font-size: 10px;")
         footer_layout.addWidget(version_label)
         
@@ -2378,7 +2345,7 @@ class UpdateManager:
     def __init__(self):
         # Configuração do Firebase Realtime Database (gratuito)
         self.firebase_url = "https://seu-projeto-firebase-default-rtdb.firebaseio.com/"
-        self.current_version = "8.6"  # Versão atual do aplicativo
+        self.current_version = "10.4"  # Versão atual do aplicativo
         self.app_name = "ConfiguradorDPI"
         
         # Alternativa gratuita: GitHub Releases
@@ -2597,7 +2564,7 @@ class UpdateManager:
                     except Exception as e:
                         return False, f"Erro ao preparar arquivo de atualização: {str(e)}"
 
-                    # Criar script PowerShell que aguarda o app fechar, substitui e abre a nova versão
+                    # Criar script PowerShell que aguarda o app fechar e substitui o executável
                     ps_script = f'''
 $ErrorActionPreference = 'SilentlyContinue'
 $exePath = "{target_exe}"
@@ -2612,34 +2579,56 @@ for ($i=0; $i -lt 240; $i++) {{
     Start-Sleep -Milliseconds 250
 }}
 
-# Substituição segura mantendo o mesmo nome
-try {{
-    if (Test-Path ($exePath + '.old')) {{ Remove-Item ($exePath + '.old') -Force -ErrorAction SilentlyContinue }}
-    if (Test-Path $exePath) {{ Rename-Item $exePath ($exePath + '.old') -Force -ErrorAction SilentlyContinue }}
-    Move-Item $newExe $exePath -Force -ErrorAction SilentlyContinue
-}} catch {{
-    try {{ Copy-Item $newExe $exePath -Force -ErrorAction SilentlyContinue }} catch {{}}
-}}
-
-# Remover o antigo se sobrou .old
-try {{ if (Test-Path ($exePath + '.old')) {{ Remove-Item ($exePath + '.old') -Force -ErrorAction SilentlyContinue }} }} catch {{}}
-
-# Limpeza (novo arquivo já movido)
-try {{ if (Test-Path $tempRoot) {{ Remove-Item $tempRoot -Recurse -Force -ErrorAction SilentlyContinue }} }} catch {{}}
-
-# Aguardar um pouco para garantir que o arquivo foi substituído
-Start-Sleep -Seconds 2
-
-# Abrir a nova versão automaticamente
-try {{
-    if (Test-Path $exePath) {{
-        Start-Process $exePath -ErrorAction SilentlyContinue
+    # Substituição simples e direta
+    try {{
+        # Fazer backup do arquivo atual (opcional)
+        if (Test-Path ($exePath + '.old')) {{ 
+            Remove-Item ($exePath + '.old') -Force -ErrorAction SilentlyContinue 
+        }}
+        
+        # Fazer backup do arquivo atual
+        if (Test-Path $exePath) {{ 
+            Copy-Item $exePath ($exePath + '.old') -Force -ErrorAction SilentlyContinue 
+        }}
+        
+        # Substituir pelo novo arquivo
+        Copy-Item $newExe $exePath -Force -ErrorAction Stop
+        
+        # Verificar se a substituição foi bem-sucedida
+        if (Test-Path $exePath) {{
+            # Remover backup antigo após sucesso
+            if (Test-Path ($exePath + '.old')) {{ 
+                Remove-Item ($exePath + '.old') -Force -ErrorAction SilentlyContinue 
+            }}
+        }}
+    }} catch {{
+        # Se falhou, tentar restaurar backup
+        if (Test-Path ($exePath + '.old')) {{
+            Copy-Item ($exePath + '.old') $exePath -Force -ErrorAction SilentlyContinue
+        }}
     }}
-}} catch {{}}
 
-# Remover o script
-Remove-Item $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
-'''
+    # Limpeza dos arquivos temporários
+    try {{ 
+        if (Test-Path $tempRoot) {{ 
+            Remove-Item $tempRoot -Recurse -Force -ErrorAction SilentlyContinue 
+        }} 
+    }} catch {{}}
+
+    # Mostrar mensagem de conclusão
+    try {{
+        Add-Type -AssemblyName System.Windows.Forms
+        [System.Windows.Forms.MessageBox]::Show(
+            "Atualizacao concluida com sucesso!`n`nVoce pode abrir o aplicativo normalmente.",
+            "MiniPCS - Atualizacao v10.4",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        )
+    }} catch {{}}
+
+    # Remover o script
+    Remove-Item $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
+    '''
                     script_path = os.path.join(temp_root, 'apply_update.ps1')
                     with open(script_path, 'w', encoding='utf-8') as f:
                         f.write(ps_script)
@@ -2657,9 +2646,10 @@ Remove-Item $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
                     QTimer.singleShot(300, QApplication.instance().quit)
 
                     message = (
-                        "Atualização aplicada com sucesso!\n\n"
-                        f"O aplicativo será fechado e a nova versão será aberta automaticamente.\n\n"
-                        f"Arquivo atualizado em: {target_exe}"
+                        "Atualização será aplicada!\n\n"
+                        f"O aplicativo será fechado para substituir o arquivo.\n"
+                        f"Após a conclusão, abra o aplicativo normalmente.\n\n"
+                        f"Nova versão: v10.4"
                     )
                     return True, message
                 except Exception as e:
